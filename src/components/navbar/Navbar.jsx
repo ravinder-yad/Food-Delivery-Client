@@ -23,6 +23,8 @@ export default function Navbar() {
     localStorage.getItem('userLiveLocation') || 'Detecting Location...'
   );
   const [searchQuery, setSearchQuery] = useState('');
+  const [dbCategories, setDbCategories] = useState([]);
+  const [dbOffers, setDbOffers] = useState([]);
 
   // Dropdown refs to detect outside clicks
   const navRef = useRef(null);
@@ -80,6 +82,29 @@ export default function Navbar() {
     };
     window.addEventListener('locationChanged', syncLocation);
 
+    const loadCategoriesAndOffers = async () => {
+      try {
+        const resCat = await fetch('http://localhost:5000/api/categories');
+        const dataCat = await resCat.json();
+        if (Array.isArray(dataCat)) {
+          setDbCategories(dataCat);
+        }
+      } catch (e) {
+        console.warn("Could not load categories from backend:", e);
+      }
+
+      try {
+        const resOff = await fetch('http://localhost:5000/api/offers');
+        const dataOff = await resOff.json();
+        if (Array.isArray(dataOff)) {
+          setDbOffers(dataOff);
+        }
+      } catch (e) {
+        console.warn("Could not load offers from backend:", e);
+      }
+    };
+    loadCategoriesAndOffers();
+
     function handleClickOutside(event) {
       if (navRef.current && !navRef.current.contains(event.target)) {
         setActiveDropdown(null);
@@ -111,25 +136,22 @@ export default function Navbar() {
     }
   };
 
-  // Mock Data
-  const categories = [
-    { name: 'Pizza', emoji: '🍕' },
-    { name: 'Burger', emoji: '🍔' },
-    { name: 'Biryani', emoji: '🍛' },
-    { name: 'North Indian', emoji: '🍲' },
-    { name: 'South Indian', emoji: '🥞' },
-    { name: 'Chinese', emoji: '🍜' },
-    { name: 'Fast Food', emoji: '🍟' },
-    { name: 'Desserts', emoji: '🍰' },
-    { name: 'Ice Cream', emoji: '🍦' },
-    { name: 'Beverages', emoji: '🥤' }
+  const categoriesList = dbCategories.length > 0 ? dbCategories : [
+    { name: 'Pizza', emoji: '🍕', fallback: true },
+    { name: 'Burger', emoji: '🍔', fallback: true },
+    { name: 'Biryani', emoji: '🍛', fallback: true },
+    { name: 'Chinese', emoji: '🍜', fallback: true },
+    { name: 'Desserts', emoji: '🍰', fallback: true },
+    { name: 'Beverages', emoji: '🥤', fallback: true }
   ];
 
-  const offers = [
+  const offersList = dbOffers.length > 0 ? dbOffers.map(o => ({
+    title: o.name,
+    desc: `Use coupon code ${o.couponCode}`,
+    badge: o.discount
+  })) : [
     { title: '50% OFF on first order', desc: 'Use code WELCOME50', badge: '50% OFF' },
-    { title: 'Free Delivery above ₹199', desc: 'Auto-applied on checkout', badge: 'FREE DEL' },
-    { title: 'Buy 1 Get 1 Free', desc: 'Valid on select desserts', badge: 'BOGO' },
-    { title: 'Festival Special Offer', desc: 'Get up to ₹100 cashback', badge: 'FESTIVAL' }
+    { title: 'Free Delivery above ₹199', desc: 'Auto-applied on checkout', badge: 'FREE DEL' }
   ];
 
   const notifications = [
@@ -504,17 +526,30 @@ export default function Navbar() {
                     exit={{ opacity: 0, y: 15 }}
                     className="absolute left-0 top-8 w-96 bg-white rounded-3xl p-5 shadow-xl border border-gray-100 grid grid-cols-2 gap-3"
                   >
-                    {categories.map((cat, idx) => (
+                    {categoriesList.slice(0, 8).map((cat, idx) => (
                       <Link
-                        key={idx}
-                        to={`/restaurants?cuisine=${cat.name}`}
+                        key={cat._id || idx}
+                        to={`/restaurants?cuisine=${encodeURIComponent(cat.name)}`}
                         onClick={() => setActiveDropdown(null)}
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors"
                       >
-                        <span className="text-xl">{cat.emoji}</span>
+                        {cat.fallback ? (
+                          <span className="text-xl">{cat.emoji}</span>
+                        ) : (
+                          <img src={cat.image} alt={cat.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                        )}
                         <span className="text-xs font-semibold text-gray-700">{cat.name}</span>
                       </Link>
                     ))}
+                    <div className="col-span-2 border-t border-gray-50 pt-2.5 mt-1">
+                      <Link
+                        to="/categories"
+                        onClick={() => setActiveDropdown(null)}
+                        className="w-full bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold text-xs py-2 rounded-xl transition-all text-center block"
+                      >
+                        See All Categories
+                      </Link>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -541,7 +576,7 @@ export default function Navbar() {
                       <FaGift className="text-rose-500" /> Hot Offers
                     </h3>
                     <div className="space-y-2">
-                      {offers.map((off, idx) => (
+                      {offersList.slice(0, 3).map((off, idx) => (
                         <div key={idx} className="p-3 bg-gray-50 rounded-2xl border border-gray-200/50 flex flex-col gap-1">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">{off.badge}</span>
@@ -550,6 +585,15 @@ export default function Navbar() {
                           <p className="text-[10px] text-gray-400">{off.desc}</p>
                         </div>
                       ))}
+                    </div>
+                    <div className="border-t border-gray-50 pt-2.5 mt-2">
+                      <Link
+                        to="/offers"
+                        onClick={() => setActiveDropdown(null)}
+                        className="w-full bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold text-xs py-2 rounded-xl transition-all text-center block"
+                      >
+                        See All Offers
+                      </Link>
                     </div>
                   </motion.div>
                 )}
@@ -576,12 +620,20 @@ export default function Navbar() {
                     exit={{ opacity: 0, y: 15 }}
                     className="absolute left-0 top-8 w-60 bg-white rounded-3xl p-4 shadow-xl border border-gray-100 flex flex-col gap-2"
                   >
-                    <a href="#" className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-2xl border border-gray-100 font-semibold text-gray-700 text-xs">
+                    <Link
+                      to="/become-partner?role=restaurant"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-2xl border border-gray-100 font-semibold text-gray-700 text-xs"
+                    >
                       <span className="text-lg">🏪</span> Restaurant Partner
-                    </a>
-                    <a href="#" className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-2xl border border-gray-100 font-semibold text-gray-700 text-xs">
+                    </Link>
+                    <Link
+                      to="/become-partner?role=delivery"
+                      onClick={() => setActiveDropdown(null)}
+                      className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-2xl border border-gray-100 font-semibold text-gray-700 text-xs"
+                    >
                       <span className="text-lg">🚴</span> Delivery Partner
-                    </a>
+                    </Link>
                   </motion.div>
                 )}
               </AnimatePresence>

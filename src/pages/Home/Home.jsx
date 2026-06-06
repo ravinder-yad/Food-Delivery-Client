@@ -106,7 +106,15 @@ export default function Home() {
 
       {/* Categories Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800 mb-8">In the mood for...?</h2>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-800">In the mood for...?</h2>
+          <button
+            onClick={() => navigate('/categories')}
+            className="text-rose-500 hover:text-rose-600 font-bold transition-colors text-sm uppercase tracking-wide cursor-pointer focus:outline-none"
+          >
+            See All Categories
+          </button>
+        </div>
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
             {[1, 2, 3, 4, 5].map((n) => (

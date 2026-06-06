@@ -16,6 +16,12 @@ export default function Restaurants() {
 
   const cuisinesList = ['All', 'Italian', 'Pizza', 'Burgers', 'American', 'Mughlai', 'Biryani', 'North Indian'];
 
+  // Sync state with URL search parameters
+  useEffect(() => {
+    setSearchQuery(searchParams.get('search') || '');
+    setSelectedCuisine(searchParams.get('cuisine') || '');
+  }, [searchParams]);
+
   useEffect(() => {
     let filtered = RESTAURANTS.filter((res) => {
       const matchesSearch =
