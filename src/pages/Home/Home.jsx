@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FaSearch, FaStar, FaClock, FaPercentage } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaSearch, FaStar, FaClock, FaPercentage, FaPlus, FaMinus, FaTimes, FaShoppingBag } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { useDispatch, useSelector } from 'react-redux';
+import { addToCart, removeFromCart } from '../../redux/slices/cartSlice';
 
 export default function Home() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const cart = useSelector((state) => state.cart);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState([]);
   const [foods, setFoods] = useState([]);
+  const [selectedFood, setSelectedFood] = useState(null);
   const [banner, setBanner] = useState({
     title: 'Delicious food, delivered to your door.',
     description: 'Order from your favorite local restaurants with smart AI-driven recommendations.',
@@ -159,7 +165,7 @@ export default function Home() {
                 transition={{ delay: index * 0.1, duration: 0.5 }}
                 whileHover={{ y: -8 }}
                 className="bg-white rounded-3xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full cursor-pointer hover:shadow-xl transition-all"
-                onClick={() => navigate(`/restaurants/${food.restaurant?._id || 'res1'}`)}
+                onClick={() => setSelectedFood(food)}
               >
                 <div className="relative h-48 w-full overflow-hidden">
                   <img
@@ -213,6 +219,168 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* Food Details Modal */}
+      <AnimatePresence>
+        {selectedFood && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-[2rem] max-w-lg w-full overflow-hidden shadow-2xl relative border border-gray-100 flex flex-col max-h-[90vh]"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedFood(null)}
+                className="absolute top-4 right-4 bg-black/55 hover:bg-black/80 text-white p-2.5 rounded-full z-10 transition-colors cursor-pointer flex items-center justify-center w-9 h-9"
+              >
+                <FaTimes />
+              </button>
+
+              {/* Product Image */}
+              <div className="relative h-64 w-full shrink-0">
+                <img
+                  src={selectedFood.image}
+                  alt={selectedFood.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6 text-white">
+                  <div className="flex items-center space-x-2">
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border uppercase tracking-wider ${
+                      selectedFood.isVeg ? 'border-green-400 text-green-400 bg-green-950/40' : 'border-red-400 text-red-400 bg-red-950/40'
+                    }`}>
+                      {selectedFood.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}
+                    </span>
+                    {selectedFood.discount > 0 && (
+                      <span className="bg-rose-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        {selectedFood.discount}% OFF
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-black mt-2 leading-tight">{selectedFood.name}</h3>
+                  <p className="text-xs text-gray-300 font-semibold mt-1">
+                    By: {selectedFood.restaurant?.name || 'Partner Kitchen'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Scrollable details */}
+              <div className="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1 text-sm font-semibold text-gray-700">
+                {/* Description */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest">Description</h4>
+                  <p className="text-gray-500 leading-relaxed text-base font-medium">
+                    {selectedFood.description || 'No description available for this delicious item.'}
+                  </p>
+                </div>
+
+                {/* Rating & Prep details */}
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <div className="text-center flex-1 border-r border-gray-200/50">
+                    <span className="block text-[10px] font-black text-gray-400 uppercase">Rating</span>
+                    <span className="text-lg font-black text-gray-800 flex items-center justify-center gap-1 mt-0.5">
+                      <FaStar className="text-amber-500 text-sm" />
+                      <span>{selectedFood.rating || '4.5'}</span>
+                    </span>
+                  </div>
+                  <div className="text-center flex-1">
+                    <span className="block text-[10px] font-black text-gray-400 uppercase">Preparation</span>
+                    <span className="text-lg font-black text-gray-800 flex items-center justify-center gap-1 mt-0.5">
+                      <FaClock className="text-rose-500 text-sm" />
+                      <span>15-20 Mins</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pricing & Add to Cart Section */}
+                <div className="flex justify-between items-center pt-4 border-t border-gray-50">
+                  <div>
+                    <span className="block text-xs font-bold text-gray-400 uppercase mb-1">Total Price</span>
+                    <div className="flex items-baseline gap-2">
+                      {selectedFood.discount > 0 ? (
+                        <>
+                          <span className="text-2xl font-black text-rose-500">
+                            ₹{Math.round(selectedFood.price * (1 - selectedFood.discount / 100))}
+                          </span>
+                          <span className="text-sm text-gray-400 line-through">
+                            ₹{selectedFood.price}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-black text-rose-500">₹{selectedFood.price}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quantity Actions */}
+                  <div>
+                    {(() => {
+                      const qty = cart.items.find(item => item._id === selectedFood._id)?.quantity || 0;
+                      return qty > 0 ? (
+                        <div className="flex items-center bg-rose-500 text-white rounded-full p-1.5 shadow-md">
+                          <button
+                            onClick={() => {
+                              dispatch(removeFromCart(selectedFood._id));
+                              toast.success('Removed from cart');
+                            }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            <FaMinus className="text-xs" />
+                          </button>
+                          <span className="font-bold px-4 text-base">{qty}</span>
+                          <button
+                            onClick={() => {
+                              const finalPrice = selectedFood.discount > 0 ? Math.round(selectedFood.price * (1 - selectedFood.discount / 100)) : selectedFood.price;
+                              dispatch(addToCart({
+                                food: { ...selectedFood, price: finalPrice },
+                                restaurant: selectedFood.restaurant || { _id: 'res1', name: 'Partner Kitchen' }
+                              }));
+                              toast.success('Added to cart');
+                            }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer flex items-center justify-center"
+                          >
+                            <FaPlus className="text-xs" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const finalPrice = selectedFood.discount > 0 ? Math.round(selectedFood.price * (1 - selectedFood.discount / 100)) : selectedFood.price;
+                            dispatch(addToCart({
+                              food: { ...selectedFood, price: finalPrice },
+                              restaurant: selectedFood.restaurant || { _id: 'res1', name: 'Partner Kitchen' }
+                            }));
+                            toast.success(`${selectedFood.name} added to cart!`);
+                          }}
+                          className="bg-rose-500 hover:bg-rose-600 text-white font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer text-sm"
+                        >
+                          <FaShoppingBag />
+                          <span>Add to Cart</span>
+                        </button>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Go to Restaurant Link */}
+                {selectedFood.restaurant && (
+                  <button
+                    onClick={() => {
+                      setSelectedFood(null);
+                      navigate(`/restaurants/${selectedFood.restaurant._id}`);
+                    }}
+                    className="w-full text-center py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-2xl font-bold transition-all text-xs cursor-pointer border border-gray-200/50"
+                  >
+                    View Restaurant Full Menu & Details
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
