@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import { clearCart } from '../../redux/slices/cartSlice';
-import { FaLock, FaCreditCard, FaShieldAlt, FaRegCalendarAlt, FaKey, FaCheck, FaPhone } from 'react-icons/fa';
+import { FaLock, FaCreditCard, FaShieldAlt, FaRegCalendarAlt, FaKey, FaCheck, FaPhone, FaWallet } from 'react-icons/fa';
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -21,6 +21,23 @@ export default function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [loading, setLoading] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWallet = async () => {
+      if (!user?._id) return;
+      try {
+        const res = await axios.get(`http://localhost:5000/api/users/${user._id}/wallet`);
+        setWalletBalance(res.data.walletBalance || 0);
+      } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+      } finally {
+        setWalletLoading(false);
+      }
+    };
+    fetchWallet();
+  }, [user]);
 
   // Simulated Payment Modal States
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -304,6 +321,50 @@ export default function Checkout() {
                     <span className="text-xs text-gray-400">Instant safe online checkout with credit/debit card or UPI.</span>
                   </div>
                 </label>
+                <label className="flex items-center space-x-3 p-4 bg-gray-50 rounded-2xl border border-gray-200/50 cursor-pointer hover:bg-gray-100/50 transition-all">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="Wallet"
+                    checked={paymentMethod === 'Wallet'}
+                    onChange={() => setPaymentMethod('Wallet')}
+                    className="w-4 h-4 text-rose-500 focus:ring-rose-500 border-gray-300"
+                  />
+                  <div className="flex-grow flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-gray-800 block text-sm flex items-center gap-1.5">
+                        <FaWallet className="text-blue-500 text-xs" />
+                        Pay with Digital Wallet
+                      </span>
+                      <span className="text-xs text-gray-400">Deduct instantly from your secure local wallet.</span>
+                    </div>
+                    <div className="text-right pl-2 shrink-0">
+                      <span className="text-xs font-black block text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        ₹{walletBalance.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                {paymentMethod === 'Wallet' && walletBalance < grandTotal && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 mt-2 flex flex-col gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-rose-500 text-sm mt-0.5">⚠️</span>
+                      <div>
+                        <h5 className="font-bold text-rose-800 text-xs">Insufficient Wallet Funds</h5>
+                        <p className="text-[11px] text-rose-600 mt-0.5">
+                          Your available balance is ₹{walletBalance.toFixed(2)}, but this order requires ₹{grandTotal.toFixed(2)}.
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      to="/wallet"
+                      className="text-[10px] bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold py-1.5 px-3 rounded-lg transition-all text-center self-start"
+                    >
+                      Top up Wallet &rarr;
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -333,10 +394,16 @@ export default function Checkout() {
 
               <button
                 onClick={handlePlaceOrder}
-                disabled={loading}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3.5 rounded-xl shadow-md transition-all text-center block focus:outline-none"
+                disabled={loading || (paymentMethod === 'Wallet' && walletBalance < grandTotal)}
+                className="w-full bg-rose-500 hover:bg-rose-600 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-md transition-all text-center block focus:outline-none"
               >
-                {loading ? 'Processing...' : paymentMethod === 'Online' ? 'Pay Online' : 'Place COD Order'}
+                {loading 
+                  ? 'Processing...' 
+                  : paymentMethod === 'Online' 
+                    ? 'Pay Online' 
+                    : paymentMethod === 'Wallet' 
+                      ? 'Pay with Wallet' 
+                      : 'Place COD Order'}
               </button>
             </div>
           </div>

@@ -14,6 +14,7 @@ import Profile from '../pages/Profile/Profile.jsx';
 import Categories from '../pages/Categories/Categories.jsx';
 import Offers from '../pages/Offers/Offers.jsx';
 import BecomePartner from '../pages/BecomePartner/BecomePartner.jsx';
+import Wallet from '../pages/Wallet/Wallet.jsx';
 
 export default function AppRoutes() {
   return (
@@ -32,6 +33,7 @@ export default function AppRoutes() {
       <Route path="/categories" element={<Categories />} />
       <Route path="/offers" element={<Offers />} />
       <Route path="/become-partner" element={<BecomePartner />} />
+      <Route path="/wallet" element={<Wallet />} />
     </Routes>
   );
 }

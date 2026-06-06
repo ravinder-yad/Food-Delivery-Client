@@ -459,15 +459,9 @@ export default function Navbar() {
                           <Link to="/profile" onClick={() => setActiveDropdown(null)} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors">
                             <FaMapMarkerAlt className="text-gray-400" /> Saved Addresses
                           </Link>
-                          <button
-                            onClick={() => {
-                              setActiveDropdown(null);
-                              toast.success('Wallet Balance: ₹500 (Promo)');
-                            }}
-                            className="w-full text-left flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors font-semibold"
-                          >
+                          <Link to="/wallet" onClick={() => setActiveDropdown(null)} className="flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors">
                             <FaWallet className="text-gray-400" /> Wallet
-                          </button>
+                          </Link>
                           <button
                             onClick={() => {
                               setActiveDropdown(null);
