@@ -19,20 +19,77 @@ export default function Navbar() {
 
   // States for interactive dropdowns
   const [activeDropdown, setActiveDropdown] = useState(null); // 'categories', 'offers', 'location', 'search', 'notifications', 'cart', 'profile'
-  const [selectedLocation, setSelectedLocation] = useState('Home, Mumbai');
+  const [selectedLocation, setSelectedLocation] = useState(
+    localStorage.getItem('userLiveLocation') || 'Detecting Location...'
+  );
   const [searchQuery, setSearchQuery] = useState('');
 
   // Dropdown refs to detect outside clicks
   const navRef = useRef(null);
 
+  const detectLiveLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await res.json();
+            if (data && data.address) {
+              const addressInfo = data.address;
+              const placeName = addressInfo.suburb || addressInfo.neighbourhood || addressInfo.road || addressInfo.city_district || '';
+              const city = addressInfo.city || addressInfo.town || addressInfo.state || '';
+              const formattedLoc = placeName ? `${placeName}, ${city}` : city || 'Live GPS Position';
+              
+              setSelectedLocation(formattedLoc);
+              localStorage.setItem('userLiveLocation', formattedLoc);
+              localStorage.setItem('userLiveCoords', JSON.stringify({ lat: latitude, lng: longitude }));
+              
+              // Custom event to sync other pages
+              window.dispatchEvent(new Event('locationChanged'));
+              toast.success(`Location updated: ${formattedLoc}`);
+            }
+          } catch (error) {
+            console.error("OSM Reverse Geocoding Error:", error);
+            const fallbackLoc = `GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            setSelectedLocation(fallbackLoc);
+            localStorage.setItem('userLiveLocation', fallbackLoc);
+            window.dispatchEvent(new Event('locationChanged'));
+          }
+        },
+        (error) => {
+          console.warn("Geolocation permission denied or timed out.");
+          if (!localStorage.getItem('userLiveLocation')) {
+            setSelectedLocation('Mumbai, India');
+            localStorage.setItem('userLiveLocation', 'Mumbai, India');
+          }
+        }
+      );
+    }
+  };
+
   useEffect(() => {
+    // If not set yet, trigger auto detection
+    if (!localStorage.getItem('userLiveLocation') || localStorage.getItem('userLiveLocation') === 'Detecting Location...') {
+      detectLiveLocation();
+    }
+
+    // Listen to location sync events
+    const syncLocation = () => {
+      setSelectedLocation(localStorage.getItem('userLiveLocation') || 'Mumbai');
+    };
+    window.addEventListener('locationChanged', syncLocation);
+
     function handleClickOutside(event) {
       if (navRef.current && !navRef.current.contains(event.target)) {
         setActiveDropdown(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('locationChanged', syncLocation);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const toggleDropdown = (name) => {
@@ -137,11 +194,13 @@ export default function Navbar() {
                             onClick={() => {
                               if (loc.type !== 'gps') {
                                 setSelectedLocation(`${loc.name}, Mumbai`);
+                                localStorage.setItem('userLiveLocation', `${loc.name}, Mumbai`);
+                                window.dispatchEvent(new Event('locationChanged'));
+                                toast.success(`Location set to ${loc.name}`);
                               } else {
-                                setSelectedLocation('Current GPS Location');
+                                detectLiveLocation();
                               }
                               setActiveDropdown(null);
-                              toast.success(`Location set to ${loc.name}`);
                             }}
                             className="w-full text-left p-3 hover:bg-gray-50 rounded-2xl border border-gray-100 flex items-start gap-3 transition-colors"
                           >

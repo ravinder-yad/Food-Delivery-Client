@@ -2,10 +2,24 @@ import React from 'react';
 import { useSelector } from 'react-redux';
 import { FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
 
+import { useState, useEffect } from 'react';
+
 export default function Profile() {
   const { user } = useSelector((state) => state.auth);
+  const [liveLocation, setLiveLocation] = useState(
+    localStorage.getItem('userLiveLocation') || 'No GPS position detected'
+  );
+
+  useEffect(() => {
+    const syncLocation = () => {
+      setLiveLocation(localStorage.getItem('userLiveLocation') || 'No GPS position detected');
+    };
+    window.addEventListener('locationChanged', syncLocation);
+    return () => window.removeEventListener('locationChanged', syncLocation);
+  }, []);
 
   const mockAddresses = [
+    { type: '🎯 Detected Live Location (GPS)', address: liveLocation },
     { type: 'Home', address: '123, Green Avenue, Mumbai, Maharashtra - 400001' },
     { type: 'Work', address: '456, Business Hub, Bandra East, Mumbai, Maharashtra - 400051' },
   ];
