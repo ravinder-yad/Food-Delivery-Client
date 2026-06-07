@@ -25,6 +25,9 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dbCategories, setDbCategories] = useState([]);
   const [dbOffers, setDbOffers] = useState([]);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [logoWidth, setLogoWidth] = useState(100);
+  const [logoShape, setLogoShape] = useState('round');
 
   // Dropdown refs to detect outside clicks
   const navRef = useRef(null);
@@ -101,6 +104,19 @@ export default function Navbar() {
         }
       } catch (e) {
         console.warn("Could not load offers from backend:", e);
+      }
+
+      try {
+        const resSettings = await fetch('http://localhost:5000/api/settings');
+        const dataSettings = await resSettings.json();
+        const settingsData = Array.isArray(dataSettings) ? dataSettings[0] : dataSettings;
+        if (settingsData && settingsData.logo) {
+          setLogoUrl(settingsData.logo);
+          setLogoWidth(settingsData.logoWidth || 100);
+          setLogoShape(settingsData.logoShape || 'round');
+        }
+      } catch (e) {
+        console.warn("Could not load brand settings logo in navbar:", e);
       }
     };
     loadCategoriesAndOffers();
@@ -183,9 +199,22 @@ export default function Navbar() {
             {/* Logo & Location */}
             <div className="flex items-center space-x-4 shrink-0">
               <Link to="/" className="flex items-center space-x-2">
-                <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent flex items-center gap-1.5">
-                  <span className="text-3xl">🛵</span> QuickBite
-                </span>
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="object-contain"
+                    style={{
+                      height: '36px',
+                      width: 'auto',
+                      borderRadius: logoShape === 'round' ? '9999px' : logoShape === 'square' ? '8px' : '0px'
+                    }}
+                  />
+                ) : (
+                  <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent flex items-center gap-1.5">
+                    <span className="text-3xl">🛵</span> QuickBite
+                  </span>
+                )}
               </Link>
               
               {/* Location Selector */}
